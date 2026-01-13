@@ -1,0 +1,10 @@
+# Virtual environments
+.venv/
+.venv_dev/
+
+
+# Logs
+*.log
+
+# test local
+/test_local/
