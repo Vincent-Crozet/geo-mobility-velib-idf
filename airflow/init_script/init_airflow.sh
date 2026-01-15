@@ -2,35 +2,36 @@
 set -e
 
 echo "==============================="
-echo " Airflow initialisation"
+echo " Airflow Entrypoint"
 echo "==============================="
 
-# Attente que la base PostgreSQL soit prête
+# ---------------------------
+# Attente que PostgreSQL soit prêt
+# ---------------------------
 echo "⏳ Waiting for PostgreSQL..."
-until pg_isready -h postgres -p 5432 -U velib; do
-  echo "PostgreSQL is unavailable - sleeping"
-  sleep 2
+until pg_isready -h "${POSTGRES_HOST:-postgres-airflow}" -p "${POSTGRES_PORT:-5432}" -U "${POSTGRES_USER:-airflow}"; do
+    echo "PostgreSQL is unavailable - sleeping"
+    sleep 2
 done
 
-# echo "👤 Configuring admin user..."
-# envsubst < /opt/airflow/users.yaml > /opt/airflow/users_processed.yaml
-# export AIRFLOW__AUTH_MANAGER__SIMPLE_AUTH_MANAGER__USERS_FILE=/opt/airflow/users_processed.yaml
-
+# ---------------------------
+# Initialisation DB et DAGs
+# ---------------------------
 echo "🗄️ Migrating Airflow DB..."
 airflow db migrate
-echo "👤 Creating admin user..."
-# python /opt/airflow/init_script/create_admin.py
-airflow users create \
-    --firstname ${AIRFLOW_ADMIN_FIRSTNAME} \
-    --lastname ${AIRFLOW_ADMIN_LASTNAME} \
-    --username ${AIRFLOW_ADMIN_USERNAME} \
-    --password ${AIRFLOW_ADMIN_PASSWORD} \
-    --email ${AIRFLOW_ADMIN_EMAIL} \
-    --role Admin \
 
+# Optionnel : créer un utilisateur admin si besoin
+# echo "👤 Creating admin user..."
+# airflow users create \
+#     --username "${AIRFLOW_ADMIN_USERNAME}" \
+#     --password "${AIRFLOW_ADMIN_PASSWORD}" \
+#     --firstname "${AIRFLOW_ADMIN_FIRSTNAME}" \
+#     --lastname "${AIRFLOW_ADMIN_LASTNAME}" \
+#     --email "${AIRFLOW_ADMIN_EMAIL}" \
+#     --role Admin || true
 
-
-echo "✅ Airflow initialization completed"
-
-airflow api-server --port 8080 &
-airflow scheduler
+# ---------------------------
+# Lancer Airflow en standalone (webserver + scheduler local executor)
+# ---------------------------
+echo "🚀 Starting Airflow..."
+exec airflow standalone
