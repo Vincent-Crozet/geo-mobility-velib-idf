@@ -1,37 +1,19 @@
 #!/bin/bash
 set -e
 
-echo "==============================="
-echo " Airflow Entrypoint"
-echo "==============================="
-
-# ---------------------------
-# Attente que PostgreSQL soit prêt
-# ---------------------------
 echo "⏳ Waiting for PostgreSQL..."
-until pg_isready -h "${POSTGRES_HOST:-postgres-airflow}" -p "${POSTGRES_PORT:-5432}" -U "${POSTGRES_USER:-airflow}"; do
-    echo "PostgreSQL is unavailable - sleeping"
-    sleep 2
+until pg_isready -h postgres-airflow -p 5432 -U airflow; do
+  echo "PostgreSQL not ready - sleeping"
+  sleep 2
 done
 
-# ---------------------------
-# Initialisation DB et DAGs
-# ---------------------------
-echo "🗄️ Migrating Airflow DB..."
+
+echo "🗄️ Migrating DB..."
+echo "DB var: $AIRFLOW__DATABASE__SQL_ALCHEMY_CONN"
+
+echo "User name: $_AIRFLOW_WWW_USER_USERNAME"
 airflow db migrate
+airflow db check
 
-# Optionnel : créer un utilisateur admin si besoin
-# echo "👤 Creating admin user..."
-# airflow users create \
-#     --username "${AIRFLOW_ADMIN_USERNAME}" \
-#     --password "${AIRFLOW_ADMIN_PASSWORD}" \
-#     --firstname "${AIRFLOW_ADMIN_FIRSTNAME}" \
-#     --lastname "${AIRFLOW_ADMIN_LASTNAME}" \
-#     --email "${AIRFLOW_ADMIN_EMAIL}" \
-#     --role Admin || true
 
-# ---------------------------
-# Lancer Airflow en standalone (webserver + scheduler local executor)
-# ---------------------------
-echo "🚀 Starting Airflow..."
-exec airflow standalone
+echo "✅ Init complete, exiting"

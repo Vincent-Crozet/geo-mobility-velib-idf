@@ -6,11 +6,13 @@ x-airflow-common: &airflow-common
   env_file:
     - .env
   environment:
+    &airflow-common-env
     AIRFLOW__CORE__EXECUTOR: LocalExecutor
     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow
     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-    AIRFLOW__CORE__FERNET_KEY: ''
-    AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
+    AIRFLOW__CORE__FERNET_KEY: 'quelque chose'
+    AIRFLOW__CORE__AUTH_MANAGER: airflow.providers.fab.auth_manager.fab_auth_manager.FabAuthManager
+    _PIP_ADDITIONAL_REQUIREMENTS: ''
     PYTHONPATH: /opt/airflow:/opt/airflow/ingestion
   volumes:
     - ./airflow/init_script:/opt/airflow/init_script
@@ -24,6 +26,19 @@ x-airflow-common: &airflow-common
       condition: service_healthy
 
 services:
+  airflow-init:
+    <<: *airflow-common
+    # entrypoint: ["/opt/airflow/init_script/init_airflow.sh"]
+    environment:
+      <<: *airflow-common-env
+      _AIRFLOW_DB_MIGRATE: 'true'
+      _AIRFLOW_WWW_USER_CREATE: 'true'
+      _AIRFLOW_WWW_USER_USERNAME: ${AIRFLOW_ADMIN_USERNAME}
+      _AIRFLOW_WWW_USER_PASSWORD: ${AIRFLOW_ADMIN_PASSWORD}
+      _AIRFLOW_WWW_USER_EMAIL: admin@example.com
+      _AIRFLOW_WWW_USER_FIRSTNAME: Admin
+      _AIRFLOW_WWW_USER_LASTNAME: Airflow
+      _AIRFLOW_WWW_USER_ROLE: Admin
   # ---------------------------
   # PostGIS Database (INDÉPENDANT - vos données métier)
   # ---------------------------
@@ -64,60 +79,82 @@ services:
       timeout: 5s
       retries: 5
 
-  # ---------------------------
-  # Initialisation Airflow
-  # ---------------------------
-  airflow-init:
+
+  airflow-scheduler:
     <<: *airflow-common
-    container_name: airflow-init
+    command: scheduler
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8974/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  # ---------------------------
+  # DAG Processor (OBLIGATOIRE)
+  # ---------------------------
+  airflow-dag-processor:
+    <<: *airflow-common
+    command: dag-processor
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  # ---------------------------
+  # Triggerer (recommandé)
+  # ---------------------------
+  airflow-triggerer:
+    <<: *airflow-common
+    command: triggerer
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
+
+  airflow-apiserver:
+    <<: *airflow-common
+    command: api-server
     ports:
       - "8080:8080"
-    environment:
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow
-      AIRFLOW__CORE__LOAD_EXAMPLES: "false"
-      AIRFLOW__CORE__FERNET_KEY: ''
-      AIRFLOW__CORE__DAGS_ARE_PAUSED_AT_CREATION: 'true'
-      ## PATH for custom ingestion modules
-      PYTHONPATH: /opt/airflow:/opt/airflow/ingestion
-      _AIRFLOW_DB_MIGRATE: 'true'
-      _AIRFLOW_WWW_USER_CREATE: 'true'
-    entrypoint: ["/opt/airflow/init_script/init_airflow.sh"]
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:8080/api/v2/version"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    restart: always
+    depends_on:
+      airflow-init:
+        condition: service_completed_successfully
 
-  # # ---------------------------
-  # # Webserver Airflow
-  # # ---------------------------
-  # airflow-api-server:
-  #   <<: *airflow-common
-  #   container_name: airflow-api_webserver
-  #   command: api-webserver
-  #   ports:
-  #     - "8080:8080"
-  #   healthcheck:
-  #     test: ["CMD", "curl", "--fail", "http://localhost:8080/health"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 5
-  #   depends_on:
-  #     airflow-init:
-  #       condition: service_completed_successfully
-
-  # # ---------------------------
-  # # Scheduler Airflow
-  # # ---------------------------
-  # airflow-scheduler:
-  #   <<: *airflow-common
-  #   container_name: airflow-scheduler
-  #   command: scheduler
-  #   healthcheck:
-  #     test: ["CMD-SHELL", 'airflow jobs check --job-type SchedulerJob --hostname "$${HOSTNAME}"']
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 5
-  #   depends_on:
-  #     airflow-init:
-  #       condition: service_completed_successfully
+  
 
 volumes:
   pgdata:           # Volume pour vos données Velib
   airflow-pgdata:   # Volume pour les métadonnées Airflow
+  # ---------------------------
+  # Initialisation Airflow
+  # ---------------------------
+  # airflow-init:
+  #   <<: *airflow-common
+  #   container_name: airflow-init
+  #   ports:
+  #     - "8080:8080"
+  #   environment:
+  #     AIRFLOW__CORE__LOAD_EXAMPLES: "false"
+  #     AIRFLOW__CORE__EXECUTOR: LocalExecutor
+  #     AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@postgres-airflow:5432/airflow
+  #     AIRFLOW__CORE__FERNET_KEY: "" 
+  #     AIRFLOW__API__JWT_SECRET: ""
+  #     ## PATH for custom ingestion modules
+  #     PYTHONPATH: /opt/airflow:/opt/airflow/ingestion
+  #     _AIRFLOW_DB_MIGRATE: 'true'
+  #     _AIRFLOW_WWW_USER_CREATE: 'true'
+  #   entrypoint: ["/opt/airflow/init_script/init_airflow.sh"]
+
+
