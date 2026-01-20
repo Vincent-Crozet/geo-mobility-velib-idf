@@ -5,7 +5,6 @@ echo "================================================"
 echo "Initialisation de la base de données Velib"
 echo "================================================"
 
-# PostgreSQL est DÉJÀ démarré par Docker, on se connecte directement
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
     -- Extensions PostGIS
     CREATE EXTENSION IF NOT EXISTS postgis;
@@ -14,24 +13,43 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     -- Schéma staging
     CREATE SCHEMA IF NOT EXISTS staging;
     
-    -- Table des stations
-    CREATE TABLE IF NOT EXISTS staging.stations (
-        station_id INT PRIMARY KEY,
+    -- Table SCD2 des stations
+    CREATE TABLE IF NOT EXISTS staging.stations_scd (
+        id SERIAL PRIMARY KEY,                    -- ← Clé primaire auto-incrémentée
+        station_id BIGINT NOT NULL,                  -- ← Pas PRIMARY KEY, peut se répéter
         station_code TEXT,
         name TEXT,
-        lat DOUBLE PRECISION,
-        lon DOUBLE PRECISION,
         capacity INT,
+        geom GEOMETRY(Point, 4326),               -- ← Mieux que lat/lon séparés pour PostGIS
         rental_methods JSONB,
+        station_opening_hours TEXT,
+        hash_diff VARCHAR(32) NOT NULL,
+        valid_from TIMESTAMP DEFAULT now(),
+        valid_to TIMESTAMP,                       -- ← NULL = enregistrement actuel
+        current_validity BOOLEAN DEFAULT TRUE,
         last_updated_at TIMESTAMP,
-        retrieved_at TIMESTAMP,
-        valid_from TIMESTAMP DEFAULT now()
+        retrieved_at TIMESTAMP
     );
+    
+    -- Index unique partiel : garantit un seul enregistrement current par station
+    CREATE UNIQUE INDEX IF NOT EXISTS unique_current_station_idx 
+    ON staging.stations_scd(station_id) 
+    WHERE current_validity = TRUE;
+    
+    -- Autres index pour performance
+    CREATE INDEX IF NOT EXISTS idx_stations_scd_station_id 
+    ON staging.stations_scd(station_id);
+    
+    CREATE INDEX IF NOT EXISTS idx_stations_scd_geom 
+    ON staging.stations_scd USING GIST(geom);
+    
+    CREATE INDEX IF NOT EXISTS idx_stations_scd_valid_from 
+    ON staging.stations_scd(valid_from DESC);
     
     -- Table des statuts de stations
     CREATE TABLE IF NOT EXISTS staging.station_status (
         id SERIAL PRIMARY KEY,
-        station_id INT,
+        station_id BIGINT NOT NULL,
         num_bikes_available INT,
         mechanical_available INT,
         ebikes_available INT,
@@ -40,11 +58,9 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
         is_renting BOOLEAN,
         is_returning BOOLEAN,
         last_updated_at TIMESTAMP,
-        retrieved_at TIMESTAMP,
-        FOREIGN KEY (station_id) REFERENCES staging.stations(station_id)
+        retrieved_at TIMESTAMP
     );
     
-    -- Index pour améliorer les performances
     CREATE INDEX IF NOT EXISTS idx_station_status_station_id 
     ON staging.station_status(station_id);
     
@@ -52,9 +68,4 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     ON staging.station_status(retrieved_at DESC);
 EOSQL
 
-echo "✓ Schéma staging créé"
-echo "✓ Tables stations et station_status créées"
-echo "✓ Extensions PostGIS activées"
-echo "================================================"
-echo "Initialisation terminée avec succès!"
-echo "================================================"
+echo "✓ Initialisation terminée avec succès!"

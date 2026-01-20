@@ -9,6 +9,7 @@ import pandas as pd
 from extract_Velib_API.velib_client import current_ts,fetch_stations, fetch_station_status
 from extract_Velib_API.velib_parser import parse_stations, parse_station_status
 # Insertion
+from ingest_Velib_API.db_connect import get_connection
 from ingest_Velib_API.ingest_station_SCD2 import upsert_stations
 
 
@@ -25,27 +26,37 @@ from ingest_Velib_API.ingest_station_SCD2 import upsert_stations
 def velib_extract_ingestion_dag():
 
     @task
-    def extract_station_status():
-        #### Extraction and parsing of Velib API data ####
-        payload = fetch_station_status()
-        payload_ts=current_ts()
+    def extract_station():
+        #### Extract & Parse Velib station information ####
         stations = fetch_stations()
         stations_ts=current_ts()
         parsed_stations=parse_stations(stations,stations_ts)
-        df_stations = pd.DataFrame(parsed_stations)
-        parsed_stations_status=parse_station_status(payload,payload_ts)
-        df_stations_status = pd.DataFrame(parsed_stations_status)
-        print(df_stations_status)
-
-    extract_station_status()
-
+        return parsed_stations
 
     @task
-    def load_stations(parsed_data: dict):
+    def extract_station_status():
+        #### Extract & Parse Velib station status ####
+        payload = fetch_station_status()
+        payload_ts=current_ts()
+        parsed_stations_status=parse_station_status(payload,payload_ts)
+
+        return parsed_stations_status
+
+    @task
+    def load_stations(parsed_station: list, parsed_status: list):
         #### Insertion into DB staging ####
-        stations = parsed_data["stations"]
-        upsert_stations(stations)
-        print(f"Upserted {len(stations)} stations into DB")
+        print("Starting load_stations task...")
+        conn = get_connection()
+        print("connection to DB done")
+        try:
+            upsert_stations(conn,parsed_station)
+            conn.commit()   # ✅ OBLIGATOIRE
+            print(f"✓ Upserted {len(parsed_station)} stations")
+        except Exception as e:
+            conn.rollback() # ✅ rollback transactionnel
+            raise           # ❗ Airflow doit voir l’erreur
+        finally:
+            conn.close()
 
     # @task
     # def load_status(parsed_data: dict):
@@ -55,8 +66,9 @@ def velib_extract_ingestion_dag():
     #     print(f"Inserted {len(status)} station status records into DB")
 
     # Orchestration TaskFlow
-    parsed = extract_station_status()
-    load_stations(parsed)
+    parsed_station = extract_station()
+    parsed_station_status = extract_station_status()
+    load_stations(parsed_station, parsed_station_status)
     # load_status(parsed)
 
 # nommer le DAG explicitement pour Airflow

@@ -1,106 +1,162 @@
 import hashlib
 import json
 from datetime import datetime
-from typing import List, Dict
+from typing import List, Dict, Any
 import logging
-from loader.db import get_connection
+
+from psycopg2.extensions import connection
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
 
-# Exemple de structure d'une station après parsing
-type StationDict = Dict[str, any]
+# Type alias pour une station
+StationDict = Dict[str, Any]
 
 
 def compute_hash(station: StationDict) -> str:
-    """Compute a hash of station fields relevant for change detection"""
-    # On inclut les champs qui définissent l'état 'métier', pas les timestamps
-    relevant = f"{station['station_id']}|{station.get('station_code')}|{station.get('name')}|{station.get('capacity')}|{station.get('lat')}|{station.get('lon')}"
+    # Compute a hash to discrimitate evolution between records
+    relevant = (
+        f"{station['station_id']}|"
+        f"{station.get('station_code')}|"
+        f"{station.get('name')}|"
+        f"{station.get('capacity')}|"
+        f"{station.get('lat')}|"
+        f"{station.get('lon')}"
+    )
     return hashlib.md5(relevant.encode('utf-8')).hexdigest()
 
 
-def upsert_stations(stations: List[StationDict]):
-    """Insert or update stations into current-only SCD table with valid_from"""
-    conn = get_connection()
+def upsert_stations(conn: connection, stations: List[StationDict]) -> None:
     cur = conn.cursor()
-    for station in stations:
-        station_hash = compute_hash(station)
-        station_id = station['station_id']
-
-        # Check if record exists
-        cur.execute("""
-            SELECT id, hash_diff
-            FROM stations_scd
-            WHERE station_id = %s
-        """, (station_id,))
-        result = cur.fetchone()
-        if result:
-            current_id, current_hash = result
-            if current_hash != station_hash:
-                # Update existing record with new values + refresh valid_from
-                cur.execute("""
-                    UPDATE stations_scd
-                    SET station_code = %s,
-                        name = %s,
-                        capacity = %s,
-                        geom = ST_SetSRID(ST_Point(%s, %s), 4326),
-                        rental_methods = %s,
-                        station_opening_hours = %s,
-                        hash_diff = %s,
-                        valid_from = %s,
-                        last_updated_at = %s,
-                        retrieved_at = %s
-                    WHERE id = %s
-                """, (
-                    station.get('station_code'),
-                    station.get('name'),
-                    station.get('capacity'),
-                    station.get('lon'),
-                    station.get('lat'),
-                    json.dumps(station.get('rental_methods', [])),
-                    station.get('station_opening_hours'),
-                    station_hash,
-                    station.get('last_updated_at'),
-                    station.get('retrieved_at'),
-                    current_id
-                ))
-                logger.info(f"Station {station_id} updated")
-            else:
-                logger.debug(f"Station {station_id} unchanged")
-        else:
-            # No record exists, insert new
+    stats = {
+        'inserted': 0,
+        'updated': 0,
+        'unchanged': 0
+    }
+    with conn.cursor() as cur:
+        for station in stations:
+            station_hash = compute_hash(station)
+            station_id = station['station_id']
+            now = datetime.now()
+            # Current valid station_id (current_validity=True)
             cur.execute("""
-                INSERT INTO stations_scd (
-                    station_id,
-                    station_code,
-                    name,
-                    capacity,
-                    geom,
-                    rental_methods,
-                    station_opening_hours,
-                    hash_diff,
-                    valid_from,
-                    last_updated_at,
-                    retrieved_at
-                )
-                VALUES (%s, %s, %s, %s, ST_SetSRID(ST_Point(%s, %s), 4326), %s, %s, %s, %s, %s, %s)
-            """, (
-                station_id,
-                station.get('station_code'),
-                station.get('name'),
-                station.get('capacity'),
-                station.get('lon'),
-                station.get('lat'),
-                json.dumps(station.get('rental_methods', [])),
-                station.get('station_opening_hours'),
-                station_hash,
-                station.get('last_updated_at'),
-                station.get('retrieved_at')
-            ))
-            logger.info(f"Station {station_id} inserted")
+                SELECT id, hash_diff
+                FROM staging.stations_scd
+                WHERE station_id = %s 
+                  AND current_validity = TRUE
+            """, (station_id,))
+            result = cur.fetchone()
+            if result:
+                current_id, current_hash = result
+                if current_hash != station_hash:
+                    #-------------------------------------------------------------
+                    #   Record evolution detected (station_id already in DB)
+                    #-------------------------------------------------------------
+                    # Step 1 : closing previous version
+                    cur.execute("""
+                        UPDATE staging.stations_scd
+                        SET current_validity = FALSE,
+                            valid_to = %s
+                        WHERE id = %s
+                    """, (now, current_id))
+                    logger.info(f"Closed old version for station {station_id} (id={current_id})")
+                    
+                    # Step 2 : Inserting new version
+                    cur.execute("""
+                        INSERT INTO staging.stations_scd (
+                            station_id,
+                            station_code,
+                            name,
+                            capacity,
+                            geom,
+                            rental_methods,
+                            station_opening_hours,
+                            hash_diff,
+                            valid_from,
+                            valid_to,
+                            current_validity,
+                            last_updated_at,
+                            retrieved_at
+                        )
+                        VALUES (
+                            %s, %s, %s, %s, 
+                            ST_SetSRID(ST_Point(%s, %s), 4326), 
+                            %s, %s, %s, %s, NULL, TRUE, %s, %s
+                        )
+                    """, (
+                        station_id,
+                        station.get('station_code'),
+                        station.get('name'),
+                        station.get('capacity'),
+                        station.get('lon'),
+                        station.get('lat'),
+                        json.dumps(station.get('rental_methods', [])),
+                        station.get('station_opening_hours'),
+                        station_hash,
+                        now,  # valid_from
+                        station.get('last_updated_at'),
+                        station.get('retrieved_at')
+                    ))
+                    stats['updated'] += 1
+                    logger.info(f"✓ Station {station_id} changed: new version created (hash: {current_hash[:8]} → {station_hash[:8]})")
+                    
+                else:
+                    #-------------------------------------------------------------
+                    #   No record evolution detected (Nothing to change) 
+                    #-------------------------------------------------------------
+                    stats['unchanged'] += 1
+                    logger.debug(f"Station {station_id} unchanged (hash: {station_hash[:8]})")
+                    
+            else:
+                    #-------------------------------------------------------------
+                    #   New record detected (station_id not in DB)
+                    #-------------------------------------------------------------
+                    cur.execute("""
+                        INSERT INTO staging.stations_scd (
+                            station_id,
+                            station_code,
+                            name,
+                            capacity,
+                            geom,
+                            rental_methods,
+                            station_opening_hours,
+                            hash_diff,
+                            valid_from,
+                            valid_to,
+                            current_validity,
+                            last_updated_at,
+                            retrieved_at
+                        )
+                        VALUES (
+                            %s, %s, %s, %s, 
+                            ST_SetSRID(ST_Point(%s, %s), 4326), 
+                            %s, %s, %s, %s, NULL, TRUE, %s, %s
+                        )
+                    """, (
+                        station_id,
+                        station.get('station_code'),
+                        station.get('name'),
+                        station.get('capacity'),
+                        station.get('lon'),
+                        station.get('lat'),
+                        json.dumps(station.get('rental_methods', [])),
+                        station.get('station_opening_hours'),
+                        station_hash,
+                        now,  # valid_from
+                        station.get('last_updated_at'),
+                        station.get('retrieved_at')
+                    ))
+                    
+                    stats['inserted'] += 1
+                    logger.info(f"✓ Station {station_id} inserted (new station)")
 
-    conn.commit()
-    cur.close()
-    conn.close()
-
+        
+        # Log final des statistiques
+        logger.info(
+            f"✓ Processed {len(stations)} stations: "
+            f"{stats['inserted']} inserted, "
+            f"{stats['updated']} updated, "
+            f"{stats['unchanged']} unchanged"
+        )
+        
 

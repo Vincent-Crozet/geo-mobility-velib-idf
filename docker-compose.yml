@@ -16,13 +16,14 @@ x-airflow-common: &airflow-common
     AIRFLOW__CORE__EXECUTION_API_SERVER_URL: 'http://airflow-apiserver:8080/execution/'
     AIRFLOW__VELIB_DB_CONN:
       postgresql+psycopg2://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST}:${POSTGRES_PORT}/${POSTGRES_DB}
-    PYTHONPATH: /opt/airflow:/opt/airflow/extract_Velib_API
+    PYTHONPATH: /opt/airflow:/opt/airflow/extract_Velib_API:/opt/airflow/ingest_Velib_API
   volumes:
     - ./airflow/init_script:/opt/airflow/init_script
     - ./airflow/dags:/opt/airflow/dags
     - ./airflow/logs:/opt/airflow/logs
     - ./airflow/plugins:/opt/airflow/plugins
     - ./airflow/extract_Velib_API:/opt/airflow/extract_Velib_API
+    - ./airflow/ingest_Velib_API:/opt/airflow/ingest_Velib_API
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on

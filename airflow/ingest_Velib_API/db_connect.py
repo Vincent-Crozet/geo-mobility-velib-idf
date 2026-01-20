@@ -8,6 +8,5 @@ def get_connection():
         user=os.environ["POSTGRES_USER"],
         password=os.environ["POSTGRES_PASSWORD"],
         host=os.environ["POSTGRES_HOST"],
-        port=os.environ["POSTGRES_PORT"],
-        cursor_factory=RealDictCursor
+        port=os.environ["POSTGRES_PORT"]
     )
