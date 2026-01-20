@@ -78,6 +78,8 @@ services:
       <<: *airflow-common-depends-on
       airflow-init:
         condition: service_completed_successfully
+      postgres-velib:
+        condition: service_healthy
 
   airflow-scheduler:
     <<: *airflow-common
@@ -153,6 +155,7 @@ services:
       - ${POSTGRES_PORT}:${POSTGRES_PORT}
     volumes:
       - velib-pgdata:/var/lib/postgresql/data
+      - ./airflow/init_script:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U velib"]
       interval: 5s
