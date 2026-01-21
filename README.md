@@ -1,96 +1,96 @@
-
 # 🚲 Geo-Mobility Analytics Platform – Vélib’ Île-de-France
-> **Status : 🚧 Work in Progress (Portfolio Project)**
+> **Status: 🚧 Work in Progress (Portfolio Project)**
 
-Plateforme d’analyse **data & géospatiale** des usages Vélib’ en Île-de-France,  
-combinant **ingestion temps réel**, **modélisation analytique**, **PostGIS** et **visualisation cartographique**.
+An end-to-end **geo-data analytics platform** focused on Vélib’ bike-sharing usage in Île-de-France.  
+This project combines **real-time data ingestion**, **geospatial modeling**, **analytical transformations**, and **cartographic visualization**.
 
-Ce projet est développé comme **démonstrateur technique** et **portfolio freelance**.
-
----
-
-## 🎯 Objectif du projet
-
-L’objectif est de concevoir une **chaîne data complète** permettant :
-
-- l’ingestion continue des données Vélib’ (stations, disponibilité)
-- le stockage géospatial structuré (PostgreSQL + PostGIS)
-- l’enrichissement avec des données territoriales (communes, population)
-- l’analyse des tensions d’usage par zone
-- la visualisation cartographique et temporelle des indicateurs clés
+It is developed as a **technical demonstrator and freelance portfolio project**.
 
 ---
 
-## 🏗️ Architecture globale
+## 🎯 Project Objective
+
+The goal of this project is to design a **realistic data engineering pipeline** that enables:
+
+- continuous ingestion of Vélib’ open API data (stations & availability)
+- centralized storage using PostgreSQL and PostGIS
+- enrichment with territorial and socio-demographic data
+- spatial and temporal analysis of usage patterns
+- visualization of key mobility indicators
+
+---
+
+## 🏗️ Global Architecture
 
 ```text
-API Vélib’
+Vélib’ API
     │
     ▼
 Airflow (ingestion)
     │
     ▼
-PostgreSQL + PostGIS  ◀── Données géographiques
+PostgreSQL + PostGIS  ◀── Geographical datasets
     │                     (communes, population)
     ▼
 DBT (staging & marts)
     │
     ▼
-Superset (cartes & KPI)
+Superset (maps & KPIs)
 ```
 ---
 
-## 🧱 Stack technique
+## 🧱 Tech stack
 
-| Domaine | Outils |
+| Domain | Tools |
 |------|------|
-| Ingestion | Apache Airflow |
-| Base de données | PostgreSQL 15 |
-| SIG | PostGIS |
-| Transformation | DBT |
-| Visualisation | Apache Superset |
+| Data ingestion | Apache Airflow |
+| Database | PostgreSQL 15 |
+| Geospatial | PostGIS |
+| Transformations | DBT |
+| Visualization | to be defined (superset, ...) |
 | Infra | Docker / Docker Compose |
 
 ---
 
-## 📊 Cas d’usage analytiques visés
+## 📊 Target Analytical Use Cases
 
-- Disponibilité des vélos en temps réel
-- Détection des zones de tension (offre vs demande)
-- Analyse territoriale par commune
-- Corrélation entre population et usage Vélib’
-- Séries temporelles par station / zone
+-Real-time bike availability monitoring
+-Detection of high-demand / low-supply areas
+-Territorial analysis by commune
+-Correlation between population density and bike usage
+-Time-series analysis by station or geographic zone
 
 ---
 
 ## 🚧 Avancement du projet
 
-### ✅ Déjà implémenté
+### ✅ Implemented
 
-- Ingestion des données Vélib’ via Airflow
-- Stockage centralisé PostgreSQL + PostGIS
-- Modèle de données brut et staging
-- Structure DBT définie
-- Architecture Docker opérationnelle
+-Vélib’ data ingestion pipelines with Airflow
+-Centralized PostgreSQL + PostGIS database
+-Raw and staging data models
+-DBT project structure
+-Docker-based local environment
 
-### 🔜 En cours / à venir
+### 🔜 In Progress / Planned
 
-- Modèles analytiques DBT (facts & agrégats)
-- Enrichissement spatial (communes, population)
-- Dashboards cartographiques Superset
-- Tests DBT & CI légère
+-DBT analytical models (facts & aggregates)
+-Spatial enrichment with population and administrative boundaries
+-Geospatial dashboards in Superset
+-DBT tests and lightweight CI
 
-> ⚠️ Ce projet est **volontairement itératif** :  
-> il illustre une approche réaliste de développement data en environnement professionnel.
 
+> ⚠️ This project is **intentionally iterative** and reflects a realistic professional data development workflow.
 ---
 
-## 📁 Organisation du repository
+## 📁 Repository structure
 ```text
 .
-├── airflow/ # DAGs d’ingestion Vélib’
-├── dbt/ # Modèles analytiques
-├── postgres/ # Initialisation PostGIS & données géographiques
+├── airflow/              # Vélib’ ingestion DAGs
+├── dbt/                  # DBT analytical models
+├── postgres/             # PostGIS initialization & geospatial assets
+│   ├── init/
+│   └── data/
 ├── docker-compose.yml
 └── README.md
 ```
@@ -101,8 +101,8 @@ Superset (cartes & KPI)
 
 **Vincent Crozet**  
 Data Analyst / Scientist, expert SIG  
-📍 Île-de-France  
-💼 Disponible pour missions freelance
+📍 Cotonou, Benin  
+
 
 🔗 LinkedIn : www.linkedin.com/in/vincent-crozet
 
@@ -110,9 +110,9 @@ Data Analyst / Scientist, expert SIG
 
 ## 📝 Note
 
-Ce repository est un **projet de démonstration technique**.  
-Il n’a pas vocation à être déployé en production tel quel, mais à illustrer :
-
-- une architecture data réaliste
-- une maîtrise des outils modernes
-- une approche analytique orientée métier
+This repository is a **technical portfolio project**.
+It is not intended to be deployed as-is in production, but to demonstrate:
+a realistic data architecture
+geospatial data modeling skills
+modern data engineering tooling
+an analytics-driven approach to mobility data
