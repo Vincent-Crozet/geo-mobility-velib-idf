@@ -12,6 +12,9 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     
     -- Schéma staging
     CREATE SCHEMA IF NOT EXISTS staging;
+
+    -- Schéma raw
+    CREATE SCHEMA IF NOT EXISTS raw;
     
     -- Table SCD2 des stations
     CREATE TABLE IF NOT EXISTS staging.stations_scd (
@@ -47,7 +50,7 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     ON staging.stations_scd(valid_from DESC);
     
     -- Table des statuts de stations
-    CREATE TABLE IF NOT EXISTS staging.station_status (
+    CREATE TABLE IF NOT EXISTS raw.station_status (
         id SERIAL PRIMARY KEY,
         station_id BIGINT NOT NULL,
         station_code TEXT,
@@ -67,10 +70,10 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     );
     
     CREATE INDEX IF NOT EXISTS idx_station_status_station_id 
-    ON staging.station_status(station_id);
+    ON raw.station_status(station_id);
     
     CREATE INDEX IF NOT EXISTS idx_station_status_extracted_at 
-    ON staging.station_status(extracted_at DESC);
+    ON raw.station_status(extracted_at DESC);
 EOSQL
 
 echo "✓ Initialisation terminée avec succès!"

@@ -17,7 +17,7 @@ def insert_station_status(conn: connection, stations_status: List[StationDict]) 
     with conn.cursor() as cur:
         for stations in stations_status:
             cur.execute("""
-                INSERT INTO staging.station_status (
+                INSERT INTO raw.station_status (
                     station_id,
                     station_code,
                     num_bikes_available,
