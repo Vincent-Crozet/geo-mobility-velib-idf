@@ -54,11 +54,11 @@ Superset (maps & KPIs)
 
 ## 📊 Target Analytical Use Cases
 
--Real-time bike availability monitoring
--Detection of high-demand / low-supply areas
--Territorial analysis by commune
--Correlation between population density and bike usage
--Time-series analysis by station or geographic zone
+- Real-time bike availability monitoring
+- Detection of high-demand / low-supply areas
+- Territorial analysis by commune
+- Correlation between population density and bike usage
+- Time-series analysis by station or geographic zone
 
 ---
 
@@ -66,18 +66,18 @@ Superset (maps & KPIs)
 
 ### ✅ Implemented
 
--Vélib’ data ingestion pipelines with Airflow
--Centralized PostgreSQL + PostGIS database
--Raw and staging data models
--DBT project structure
--Docker-based local environment
+- Vélib’ data ingestion pipelines with Airflow
+- Centralized PostgreSQL + PostGIS database
+- Raw and staging data models
+- DBT project structure
+- Docker-based local environment
 
 ### 🔜 In Progress / Planned
 
--DBT analytical models (facts & aggregates)
--Spatial enrichment with population and administrative boundaries
--Geospatial dashboards in Superset
--DBT tests and lightweight CI
+- DBT analytical models (facts & aggregates)
+- Spatial enrichment with population and administrative boundaries
+- Geospatial dashboards in Superset
+- DBT tests and lightweight CI
 
 
 > ⚠️ This project is **intentionally iterative** and reflects a realistic professional data development workflow.
