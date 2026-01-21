@@ -51,6 +51,45 @@ Superset (maps & KPIs)
 | Infra | Docker / Docker Compose |
 
 ---
+## ⚙️ Development & Configuration
+
+### Local development environment
+
+Local Python development is managed using **UV**, providing:
+- fast dependency resolution
+- reproducible environments
+- isolation between local tooling and Dockerized services
+
+This allows smooth iteration on ingestion logic and data models while keeping
+the runtime environment consistent with the containerized stack.
+
+---
+
+### Secrets & configuration management
+
+Sensitive configuration values (database credentials, API tokens, Airflow secrets)
+are managed through environment variables.
+
+- A `.env.example` file is provided as a template
+- Actual secrets are stored in a local `.env` file (not committed)
+- Docker Compose loads configuration directly from the `.env` file
+
+This approach keeps the repository secure while remaining easy to configure locally.
+
+---
+
+### Airflow authentication note (Docker Compose)
+
+When running Airflow with Docker Compose, a **static JWT secret key** is explicitly
+defined via environment variables.
+
+This is required to avoid authentication issues related to dynamic secret generation
+when containers are recreated, as documented in the following Airflow issue:
+
+https://github.com/apache/airflow/issues/49646
+
+Defining a single, consistent JWT secret ensures stable authentication behavior
+across Airflow components in a local Docker-based setup.
 
 ## 📊 Target Analytical Use Cases
 
