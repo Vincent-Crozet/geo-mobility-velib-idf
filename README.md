@@ -62,7 +62,7 @@ Superset (maps & KPIs)
 
 ---
 
-## 🚧 Avancement du projet
+## 🚧 Project Status
 
 ### ✅ Implemented
 
