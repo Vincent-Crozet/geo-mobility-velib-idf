@@ -144,26 +144,45 @@ services:
       _AIRFLOW_WWW_USER_ROLE: Admin
     user: "0:0"
 
-  ################## POSTGIS SERVICES ##################
+  ################## postgis SERVICES ##################
   postgres-velib:
     image: postgis/postgis:15-3.4
-    container_name: velib-postgres
+    container_name: postgres-velib
     env_file:
     - .env
     environment:
       POSTGRES_DB: ${POSTGRES_DB}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PYTHONPATH: /additional_assets
     ports:
       - ${POSTGRES_PORT}:${POSTGRES_PORT}
     volumes:
       - velib-pgdata:/var/lib/postgresql/data
-      - ./airflow/init_script/Postgis:/docker-entrypoint-initdb.d
+      - ./postgis/init_script:/docker-entrypoint-initdb.d
+      - ./postgis/additional_assets:/additional_assets
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
       timeout: 5s
       retries: 5
+
+  # Using loader to insert additionnal geo assets into postgis DB
+  loader:
+    build: ./postgis/additional_assets
+    container_name: postgres-velib-loader
+    depends_on:
+      postgres-velib:
+        condition: service_healthy
+    volumes:
+      - ./postgis/additional_assets:/app
+    working_dir: /app
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_HOST: postgres-velib
+      POSTGRES_PORT: ${POSTGRES_PORT}
 
 volumes:
   airflow-pgdata:
