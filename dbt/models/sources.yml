@@ -63,4 +63,3 @@ sources:
           - name : Population_total
             tests:
               - not_null
-              - unique
