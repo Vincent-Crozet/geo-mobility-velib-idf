@@ -1,0 +1,66 @@
+version: 2
+
+sources:
+  - name: velib
+    schema: raw
+    description: "Raw Velib data ingested from the Velib API"
+
+    tables:
+      - name: stations
+        description: "Velib stations location and details with SCD2 versionning"
+        columns:
+          - name: id
+            tests:
+              - not_null
+              - unique
+          - name: station_id
+            tests:
+              - not_null
+          ### To be defined if relevant
+          - name: is_current
+            tests:
+              - not_null
+          - name: valid_from
+          - name: valid_to
+
+      - name: station_status
+        description: "Velib stations status time series data"
+        freshness:
+          warn_after: {count: 15, period: minute}
+          error_after: {count: 30, period: minute}
+        columns:
+          - name: station_id
+            tests:
+              - not_null
+          - name: last_reported_at
+            tests:
+              - not_null
+
+  - name: geo
+    schema: add_assets
+    description: "Additional geographic/demographic assets for Île-de-France"
+
+    tables:
+      - name: communes_idf
+        description: "List and geometries of communes in Île-de-France"
+        columns:
+          - name: nomcom
+            tests:
+              - not_null
+              - unique
+          - name : objectid
+            tests:
+              - not_null
+              - unique
+
+      - name: pop_communes_idf
+        description: "List and geometries of communes with population data in Île-de-France"
+        columns:
+          - name: nomcom
+            tests:
+              - not_null
+              - unique
+          - name : Population_total
+            tests:
+              - not_null
+              - unique

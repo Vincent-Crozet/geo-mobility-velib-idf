@@ -41,7 +41,7 @@ def insert_station_status(conn: connection, stations_status: List[StationDict]) 
                 )
             """, (
                 stations.get('station_id'),
-                stations.get('sation_code'),
+                stations.get('station_code'),
                 stations.get('num_bikes_available'),
                 stations.get('numBikesAvailable'),
                 stations.get('ebikes_available'),

@@ -1,0 +1,13 @@
+velib_project_profile:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: ${POSTGRES_HOST}      # Nom du service Docker
+      user: ${POSTGRES_USER} 
+      password: ${POSTGRES_PASSWORD} 
+      port: ${POSTGRES_PORT} 
+      dbname: ${POSTGRES_DB} 
+      schema: raw               # DBT utilisera ce schéma par défaut
+      threads: 1
+      keepalives_idle: 0
