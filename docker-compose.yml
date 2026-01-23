@@ -24,6 +24,11 @@ x-airflow-common: &airflow-common
     - ./airflow/plugins:/opt/airflow/plugins
     - ./airflow/extract_Velib_API:/opt/airflow/extract_Velib_API
     - ./airflow/ingest_Velib_API:/opt/airflow/ingest_Velib_API
+    # To run local dbt container from airflow tasks
+    - ./scripts:/opt/airflow/scripts                      
+    - /var/run/docker.sock:/var/run/docker.sock          
+    - ./docker-compose.dbt.yml:/opt/airflow/docker-compose.dbt.yml 
+    - ./dbt:/opt/airflow/dbt          
   user: "${AIRFLOW_UID:-50000}:0"
   depends_on:
     &airflow-common-depends-on
