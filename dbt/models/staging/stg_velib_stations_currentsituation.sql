@@ -1,5 +1,5 @@
 {{ config(
-    materialized='table'  -- tu peux mettre 'view' si tu ne veux pas stocker physiquement
+    materialized='table'
 ) }}
 
 WITH latest_extraction AS (
