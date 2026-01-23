@@ -2,7 +2,6 @@
 from airflow.sdk import dag
 from airflow.sdk import task
 from datetime import datetime, timedelta
-from datetime import timedelta
 import pandas as pd
 
 # Extraction 

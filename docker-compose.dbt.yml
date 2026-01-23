@@ -1,0 +1,16 @@
+services:
+  dbt:
+    image: ghcr.io/dbt-labs/dbt-postgres:1.8.2
+    container_name: velib-dbt
+    environment:
+      DBT_PROFILES_DIR: /usr/app
+      DBT_PROJECT_DIR: /usr/app
+    volumes:
+      - ./:/usr/app
+    networks:
+      - velib_default
+    working_dir: /usr/app
+
+networks:
+  velib_default:
+    external: true  # Indique que le réseau existe déjà

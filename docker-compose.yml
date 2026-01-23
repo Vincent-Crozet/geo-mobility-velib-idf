@@ -1,5 +1,7 @@
 x-airflow-common: &airflow-common
-  image: apache/airflow:3.1.0-python3.12
+  build:
+    context: ./airflow
+    dockerfile: Dockerfile
   env_file:
     - .env
   environment:
@@ -24,12 +26,11 @@ x-airflow-common: &airflow-common
     - ./airflow/plugins:/opt/airflow/plugins
     - ./airflow/extract_Velib_API:/opt/airflow/extract_Velib_API
     - ./airflow/ingest_Velib_API:/opt/airflow/ingest_Velib_API
-    # To run local dbt container from airflow tasks
-    - ./scripts:/opt/airflow/scripts                      
+    # To run local dbt container from airflow tasks                     
     - /var/run/docker.sock:/var/run/docker.sock          
-    - ./docker-compose.dbt.yml:/opt/airflow/docker-compose.dbt.yml 
     - ./dbt:/opt/airflow/dbt          
-  user: "${AIRFLOW_UID:-50000}:0"
+    - ./docker-compose.dbt.yml:/opt/airflow/dbt/docker-compose.dbt.yml 
+  user: "${AIRFLOW_UID:-50000}"
   depends_on:
     &airflow-common-depends-on
     redis:
@@ -197,25 +198,12 @@ services:
       POSTGRES_HOST: postgres-velib
       POSTGRES_PORT: ${POSTGRES_PORT}
 
-  #-------------------------------------------------------------
-  #
-  # DBT SERVICES 
-  #
-  # #-------------------------------------------------------------
-  dbt:
-    image: ghcr.io/dbt-labs/dbt-postgres:1.7.9
-    container_name: dbt
-    volumes:
-      - ./dbt:/usr/app
-    working_dir: /usr/app
-    environment:
-      DBT_PROFILES_DIR: /usr/app
-    depends_on:
-      postgres-velib:
-        condition: service_healthy
-    networks:
-      - default
-
 volumes:
   airflow-pgdata:
   velib-pgdata:
+
+# RÉSEAU PARTAGÉ POUR DBT
+networks:
+  default:
+    name: velib_default
+    driver: bridge
