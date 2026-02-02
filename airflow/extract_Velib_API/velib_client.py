@@ -3,6 +3,7 @@ import os
 import requests
 from datetime import datetime
 from zoneinfo import ZoneInfo 
+from typing import Dict, Any
 
 BASE_URL = "https://prim.iledefrance-mobilites.fr/marketplace/velib"
 
@@ -17,13 +18,13 @@ HEADERS = {
 def current_ts() -> datetime:
     return datetime.now(tz=ZoneInfo("Europe/Paris"))
 
-def fetch_stations():
+def fetch_stations() -> Dict[str, Any]:
     url = f"{BASE_URL}/station_information.json"
     response = requests.get(url, headers=HEADERS, timeout=30)
     response.raise_for_status()
     return response.json()
 
-def fetch_station_status():
+def fetch_station_status() -> Dict[str, Any]:
     url = f"{BASE_URL}/station_status.json"
     response = requests.get(url, headers=HEADERS, timeout=30)
     response.raise_for_status()
