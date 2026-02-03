@@ -8,12 +8,12 @@ services:
 
   postgres:
     image: postgres:15
-    container_name: superset-postgres
+    container_name: ${SUPERSET_DB_HOST}
     restart: unless-stopped
     environment:
-      POSTGRES_DB: superset
-      POSTGRES_USER: superset
-      POSTGRES_PASSWORD: superset
+      POSTGRES_DB: ${SUPERSET_DB}
+      POSTGRES_USER: ${SUPERSET_DB_USER}
+      POSTGRES_PASSWORD: ${SUPERSET_DB_PASSWORD}
     volumes:
       - postgres-data:/var/lib/postgresql/data
 
@@ -25,23 +25,24 @@ services:
     restart: unless-stopped
     environment:
       - DATABASE_DIALECT=postgresql
-      - DATABASE_HOST=postgres
+      - DATABASE_HOST=${SUPERSET_DB_HOST}
       - DATABASE_PORT=5432
-      - DATABASE_DB=superset
-      - DATABASE_USER=superset
-      - DATABASE_PASSWORD=superset
+      - DATABASE_DB=${SUPERSET_DB}
+      - DATABASE_USER=${SUPERSET_DB_USER}
+      - DATABASE_PASSWORD=${SUPERSET_DB_PASSWORD}
       - REDIS_HOST=redis
       - REDIS_PORT=6379
-      - JWT_SECRET_KEY=${JWT_SECRET_KEY}
       - SUPERSET_SECRET_KEY=${SUPERSET_SECRET_KEY}
     ports:
       - "8088:8088"
     depends_on:
       - postgres
       - redis
+    networks:
+      - default
+      - idfm_network
     volumes:
       - superset-home:/app/superset_home
-      # Optionnel : monter votre config personnalisée
       - ./superset/superset_config.py:/app/pythonpath/superset_config.py
     command:
       - /bin/sh
@@ -57,10 +58,7 @@ volumes:
   postgres-data:
   superset-home:
 
-# Réseau par défaut - décommentez pour connecter à d'autres stacks
-# networks:
-#   default:
-#     name: idfm_network
-#     external: false
+networks:
+  idfm_network:
+    external: true
 
-        # superset run -h 0.0.0.0 -p 8088 --with-threads --reload

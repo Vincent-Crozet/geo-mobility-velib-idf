@@ -10,9 +10,6 @@ SUPERSET_WEBSERVER_PORT = 8088
 # Flask Secret Key - CHANGEZ CETTE VALEUR EN PRODUCTION
 SECRET_KEY = os.environ.get("SUPERSET_SECRET_KEY", "change-this-to-a-long-random-string")
 
-# JWT Secret pour les requêtes asynchrones (minimum 32 bytes)
-JWT_SECRET_KEY = os.environ.get("JWT_SECRET_KEY")
-
 # SQLAlchemy Database URI pour les métadonnées Superset
 SQLALCHEMY_DATABASE_URI = (
     f"postgresql://{os.environ.get('DATABASE_USER', 'superset')}:"

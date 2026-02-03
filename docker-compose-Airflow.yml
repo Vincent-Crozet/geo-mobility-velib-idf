@@ -173,6 +173,9 @@ services:
       - velib-pgdata:/var/lib/postgresql/data
       - ./postgis/init_script:/docker-entrypoint-initdb.d
       - ./postgis/additional_assets:/additional_assets
+    networks:
+      - default
+      - idfm_network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 5s
@@ -199,3 +202,7 @@ services:
 volumes:
   airflow-pgdata:
   velib-pgdata:
+
+networks:
+  idfm_network:
+    name: idfm_network
