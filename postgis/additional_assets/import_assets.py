@@ -34,12 +34,13 @@ def ensure_schema_exists(engine, schema_name: str):
 ############### GEODATA ##########################
 def insert_geodata(file):
     gdf = gpd.read_file(file)
-    print(f"📦 Loaded {len(gdf)} features from GeoJSON.")
+    print(f"📦 Loaded {len(gdf)} features from gpkg.")
+    gdf=gdf.to_crs(epsg=4326)
     return gdf
 
-def create_table_with_geometry(engine, gdf,TABLE_NAME: str):
-    gdf.to_postgis(TABLE_NAME, engine, if_exists="replace", index=True)
-    print(f"✅ Table '{TABLE_NAME}' created (with geometry).")
+def create_table_with_geometry(engine, gdf, table_name: str, schema: str):
+    gdf.to_postgis(table_name, engine, schema=schema, if_exists="replace", index=True)
+    print(f"✅ Table '{schema}.{table_name}' created (with geometry).")
 
 ############# TABLE DATA ##########################
 def insert_data(file):
@@ -47,9 +48,9 @@ def insert_data(file):
     print(f"📦 Loaded {len(df)} features from GeoJSON.")
     return df
 
-def create_table_without_geometry(engine, df,TABLE_NAME: str):
-    df.to_sql(TABLE_NAME, engine, if_exists="replace", index=True)
-    print(f"✅ Table '{TABLE_NAME}' created (without geometry).")
+def create_table_without_geometry(engine, df, table_name: str, schema: str):
+    df.to_sql(table_name, engine, schema=schema, if_exists="replace", index=True)
+    print(f"✅ Table '{schema}.{table_name}' created (without geometry).")
 ####################################################
 
 
@@ -73,14 +74,14 @@ if __name__ == "__main__":
     print(f"Files to insert : {liste_csv}") 
     for file in liste_gpkg:
         print(f"File currently uploaded : {file}")
-        TABLE_NAME=ADD_ASSETS_SCHEMA+"."+os.path.splitext(os.path.basename(file))[0].lower()
-        print(f"insertion successfull Table name: {TABLE_NAME}")
+        table_name = os.path.splitext(os.path.basename(file))[0].lower()
+        print(f"insertion successfull Table name: {ADD_ASSETS_SCHEMA}.{table_name}")
         gdf = insert_geodata(file)
-        create_table_with_geometry(engine, gdf,TABLE_NAME)
+        create_table_with_geometry(engine, gdf, table_name, ADD_ASSETS_SCHEMA)
     for file in liste_csv:
         print(f"le fichier a ouvrir est : {file}")
-        TABLE_NAME=ADD_ASSETS_SCHEMA+"."+os.path.splitext(os.path.basename(file))[0].lower()
+        table_name = os.path.splitext(os.path.basename(file))[0].lower()
         df = insert_data(file)
-        print(f"insertion successfull Table name: {TABLE_NAME}")
-        create_table_without_geometry(engine, df,TABLE_NAME)
+        print(f"insertion successfull Table name: {ADD_ASSETS_SCHEMA}.{table_name}")
+        create_table_without_geometry(engine, df, table_name, ADD_ASSETS_SCHEMA)
 

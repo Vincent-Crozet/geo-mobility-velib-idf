@@ -2,14 +2,13 @@
 set -e
 
 echo "================================================"
-echo "Initialisation de la base de données Velib"
+echo "Initializing Velib Database"
 echo "================================================"
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
-    -- Extensions PostGIS
+    -- activate PostGIS extension
     CREATE EXTENSION IF NOT EXISTS postgis;
     CREATE EXTENSION IF NOT EXISTS postgis_topology;
-
 
     -- Schéma raw
     CREATE SCHEMA IF NOT EXISTS raw;
