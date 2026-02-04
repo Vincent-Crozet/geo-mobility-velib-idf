@@ -1,7 +1,3 @@
-{{ config(
-    materialized='table'
-) }}
-
 WITH latest_extraction AS (
     SELECT 
         MAX(extracted_at) AS max_extracted_at

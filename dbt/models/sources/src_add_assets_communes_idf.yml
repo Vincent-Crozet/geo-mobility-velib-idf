@@ -1,0 +1,72 @@
+# dbt/models/_sources/src_add_assets_communes_idf.yml
+version: 2
+
+sources:
+  - name: velib
+    schema: add_assets
+
+    tables:  
+      - name: communes_idf
+        description: |
+          Shapefile of IDF communes
+          
+          EPSG: 4326
+
+          ** Primary Key** Insee  Unique postal code of the commune
+          ** Natural Key** nomcom
+        columns:
+          ##
+          - name: objectid
+            description: |
+              Unique identifier of objects redundant with insee which information 
+              ⚠️ To be removed
+            data_tests:
+              - not_null
+          ##
+          - name: insee
+            description: |
+              **Primary key** Postal code of the commune
+              
+            data_tests:
+              - not_null
+
+          ##
+          - name: nomcom
+            description: |
+              Name of the commune
+              
+            data_tests:
+              - not_null    
+
+          ##
+          - name: numdep
+            description: |
+              Department number         
+            data_tests:
+              - not_null
+          ##
+          - name: fusioinsee
+            description: |
+              Nan 
+              ⚠️ To be removed    
+          ##
+          - name: st_areasha
+            description: |
+              shapefile area ? 
+            data_tests:
+              - not_null
+          ##
+          - name: st_lengths
+            description: |
+              shapefile perimeter ? 
+            data_tests:
+              - not_null    
+          ##
+          - name: geometry
+            description: |
+              Shapefile 
+            data_tests:
+              - not_null        
+                    
+
+          

@@ -1,0 +1,41 @@
+# dbt/models/_sources/src_add_assets_pop_communes_idf.yml
+version: 2
+
+sources:
+  - name: velib
+    schema: add_assets
+
+    tables:  
+      - name: pop_communes_idf
+        description: |
+          Population of IDF communes with shapefile
+          
+          EPSG: 4326
+
+          ** Primary Key** nomcom
+
+        columns:
+          ##
+          - name: nomcom
+            description: |
+              **Primary key** Commune name
+             
+            data_tests:
+              - not_null
+          ##
+          - name: Population_total
+            description: |
+              Commune Population
+              
+            data_tests:
+              - not_null
+
+          ##
+          - name: geometry
+            description: |
+              shapefile
+              
+            data_tests:
+              - not_null    
+
+          

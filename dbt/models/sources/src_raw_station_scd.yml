@@ -1,0 +1,102 @@
+# dbt/models/_sources/src_velib_stations.yml
+version: 2
+
+sources:
+  - name: velib
+    schema: raw
+    
+    tables:
+      - name: stations_scd
+        description: |
+          **Dimension SCD Type 2 for stations list**
+          
+          Tracks configuration changes for stations:
+          - Geographic relocations
+          - Capacity changes
+          - Station renaming
+          
+          **SCD2 Strategy**:
+          - `is_current = true`: current version
+          - `is_current = false`: historical versions
+          - `valid_from` / `valid_to`: validity period
+
+          **Surogate Key**: id auto increment
+          **Natural Key**: station_id 
+          **Composite Key**: (station_id, is_current) when is_current = true
+          
+        freshness:
+          warn_after: {count: 1, period: day}
+        
+        columns:
+          ##
+          - name: id
+            description: "Technical surrogate key (auto-increment)"
+            data_tests:
+              - unique
+              - not_null
+          ##
+          - name: station_id
+            description: | 
+              Station natural identifier 
+              Multiple rows can exist for the same station_id (SCD2).
+            data_tests:
+              - not_null
+          ##
+          - name: is_current
+            description: |
+              SCD2 indicator:
+              - `true`: current active version
+              - `false`: historical version
+
+              **Constraint**: (station_id, is_current=true) forms a unique composite key
+            data_tests:
+              - not_null
+              - accepted_values:
+                  values: [true, false]
+                  quote: false 
+          ##
+          - name: name
+            description: "Station name (e.g: 'Benjamin Godard - Victor Hugo')"
+          ##
+          - name: capacity
+            description: Total dock number
+            data_tests:
+              - not_null
+              - dbt_utils.expression_is_true:
+                  expression: ">= 0"
+          ##
+          - name: lat
+            description: "Latitude WGS84"
+            data_tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 48.1
+                  max_value: 49.2
+          ##
+          - name: lon
+            description: "Longitude WGS84"
+            data_tests:
+              - not_null
+              - dbt_utils.accepted_range:
+                  min_value: 1.4
+                  max_value: 3.6
+          ##
+          - name: valid_from
+            description: "Start of validity period for SCD2"
+            data_tests:
+              - not_null
+          ##
+          - name: valid_to
+            description: |
+              end for validity period
+              `NULL` if current version.
+          ##
+          - name: extracted_at
+            description: "Timestamp of Airflow extraction"
+            data_tests:
+              - not_null
+          ##
+          - name: last_updated_at
+            description: "Timestamp of last update by Velib API"
+            data_tests:
+              - not_null

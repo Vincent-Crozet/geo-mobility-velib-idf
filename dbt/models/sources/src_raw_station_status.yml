@@ -1,0 +1,195 @@
+# dbt/models/_sources/src_velib_stations.yml
+version: 2
+
+sources:
+  - name: velib
+    schema: raw
+
+    tables:  
+      - name: station_status
+        description: |
+          **Time-series fact table of Vélib station availability snapshots**
+          
+          Contains real-time availability data for each station, ingested every 5 minutes
+          via the Airflow DAG `velib_ingestion_dag`.
+          
+          ## Data Grain
+          One row per station per snapshot (5-minute intervals). No initial filtering
+          
+          ## Relationships
+          - **Foreign Key**: `station_id` → `stations_scd.station_id` WHERE `is_current = true` (complex relation to be cleaned at staging level)
+          - **Cardinality**: Many-to-One (many snapshots per current station)
+          
+          ## Data Volume
+          - ~1,400 active stations
+          - 12 snapshots/hour/station
+          - ~400,000 rows/day
+          
+        freshness:
+          warn_after: {count: 15, period: minute}
+          error_after: {count: 30, period: minute}
+        loaded_at_field: extracted_at  #  To check freshness
+        columns:
+          ##
+          - name: station_id
+            description: |
+              **Foreign key to current station dimension**
+              
+              References: `stations_scd.station_id` WHERE `is_current = true`
+              
+              Business identifier for the Vélib station. Links to the station
+              master data (localization) in the stations_scd table (current version only).
+            data_tests:
+              - not_null
+          ##
+          - name: station_code
+            description: |
+              Alphanumeric station code (format: 'DDDDD-XX')
+              
+              Example: '16107-35'
+              - First part: station identifier
+              - Second part: sector/zone code
+          ##
+          - name: num_bikes_available
+            description: |
+              **Total number of bikes available for rental**
+              
+              Sum of mechanical and electric bikes currently docked and ready to rent.
+              
+              **Formula**: `mechanical_available + ebikes_available`
+              
+              **Note**: Normalized snake_case version from API.
+              Should match `numBikesAvailable` (camelCase legacy field).
+            data_tests:
+              - not_null
+              - dbt_utils.expression_is_true:
+                  expression: ">= 0"
+          ##
+          - name: numBikesAvailable
+            description: |
+              Should be identical to num_bikes_available
+              Kept for audit and backward compatibility.
+              
+              ⚠️ Use `num_bikes_available` preferably
+          ##
+          - name: mechanical_available
+            description: |
+              Number of mechanical (non-electric) bikes available
+            data_tests:
+              - dbt_utils.expression_is_true:
+                  expression: ">= 0"
+          ##
+          - name: ebikes_available
+            description: |
+              Number of electric bikes (e-bikes) available
+  
+              Vélib bikes with electric pedal assistance.
+            data_tests:
+              - dbt_utils.expression_is_true:
+                  expression: ">= 0"
+          ##
+          - name: num_docks_available
+            description: |
+              **Number of empty docking points available**
+              
+              Free slots where bikes can be returned.
+              
+              **Business Logic**:
+              `num_bikes_available + num_docks_available ≈ station_capacity`
+              
+              (May differ slightly during active rentals/returns)
+            data_tests:
+              - not_null
+              - dbt_utils.expression_is_true:
+                  expression: ">= 0"
+          ##
+          - name: numDocksAvailable
+            description: |
+              Similar to num_docks_available 
+
+              ⚠️ Use `num_docks_available`.
+          ##
+          - name: is_installed
+            description: |
+              **Station installation status**
+              
+              Indicates whether the station is physically installed and operational.
+              
+              **Values**:
+              - `1`: Station is installed and operational
+              - `0`: Station is not installed (being set up or decommissioned)
+              
+              **Note**: Uses integer (0/1) instead of boolean for API compatibility.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  values: [0, 1]
+                  quote: false 
+          ##
+          - name: is_renting
+            description: |
+              **Rental availability flag**
+              
+              Indicates whether the station is accepting bike rentals.
+              
+              **Values**:
+              - `1`: Rentals are allowed (users can take bikes)
+              - `0`: Rentals are disabled (station closed or under maintenance)
+              
+              **Business Rule**: Station can be installed but not renting.
+            data_tests:
+              - not_null
+              - accepted_values:
+                  values: [0, 1]
+                  quote: false  
+          ##
+          - name: is_returning
+            description: |
+              **Return availability flag**
+              
+              Indicates whether the station is accepting bike returns.
+              
+              **Values**:
+              - `1`: Returns are allowed (users can dock bikes)
+              - `0`: Returns are disabled (station full or closed)
+              
+              **Business Rule**: Station can be renting but not accepting returns (if full).
+            data_tests:
+              - not_null
+              - accepted_values:
+                  values: [0, 1]
+                  quote: false 
+          ##
+          - name: last_reported_at
+            description: |
+              **Station's last report timestamp** (UTC)
+              Timestamp when the station last sent its status to the Vélib API.
+              This is provided by the API and reflects the station's internal clock.
+              **Source**: Vélib API field `last_reported`
+              ⚠️ May differ from `extracted_at` (our ingestion time).
+            data_tests:
+              - not_null
+          
+          - name: last_updated_at
+            description: |
+              **API last update timestamp** (UTC)
+               ⚠️  ⚠️  ⚠️  ⚠️  ⚠️ 
+              Timestamp when the general station Velib API update
+              **Source**: Vélib API field `last_updated`
+              
+          ##
+          - name: extracted_at
+            description: |
+              **Pipeline extraction timestamp** (UTC)
+              Timestamp when our Airflow pipeline extracted this data from the API.
+              **Usage**:
+              - Data lineage tracking
+              - Freshness monitoring (used in `loaded_at_field`)
+              - Temporal analysis of data latency
+              - Partitioning key for time-based queries
+              
+              **Business Logic**:
+              `extracted_at` should be >= `last_reported_at` (we extract after the station reports)
+            data_tests:
+              - not_null
+ 
