@@ -2,7 +2,7 @@
 version: 2
 
 sources:
-  - name: velib
+  - name: geo_asset
     schema: add_assets
 
     tables:  

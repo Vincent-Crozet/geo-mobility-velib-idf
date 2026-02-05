@@ -27,9 +27,10 @@ latest_status_extraction AS (
     FROM {{ source('velib', 'station_status') }} AS s
     ),
 
-latest_status_status AS (
+latest_station_status AS (
     SELECT s.station_id,
-        s.num_docks_available
+        s.num_docks_available,
+        s.num_bikes_available
     FROM {{ source('velib', 'station_status') }} AS s
     JOIN latest_status_extraction le
         ON s.extracted_at = le.max_extracted_at
@@ -39,11 +40,12 @@ latest_status_status AS (
 mismatch_case AS (
     SELECT sstatus.station_id ,
             sstatus.num_docks_available,
+            sstatus.num_bikes_available,
             sscd.capacity
-    FROM latest_status_status AS sstatus
+    FROM latest_station_status AS sstatus
     JOIN last_station_scd AS sscd
     ON sstatus.station_id=sscd.station_id
-    WHERE sstatus.num_docks_available!=sscd.capacity
+    WHERE sstatus.num_docks_available+sstatus.num_bikes_available!=sscd.capacity
 )
 
 
