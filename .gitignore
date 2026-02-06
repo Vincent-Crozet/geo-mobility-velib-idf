@@ -24,7 +24,7 @@ dbt/logs/
 /superset/.cache/
 /superset/.local/
 
-# Byte-compiled / optimized / DLL files
+# handeling 
 __pycache__/
 *.py[cod]
 *$py.class
