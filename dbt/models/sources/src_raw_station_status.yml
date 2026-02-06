@@ -207,4 +207,11 @@ sources:
               `extracted_at` should be >= `last_reported_at` (we extract after the station reports)
             data_tests:
               - not_null
+
+          ##
+          - name: last_extracted_at
+            description: |
+              Adding a second extraction timestamp information to be able to garantee that the pipeline was run recently
+            data_tests:
+              - not_null
  

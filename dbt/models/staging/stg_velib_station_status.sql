@@ -1,5 +1,15 @@
 -- dbt/models/staging/stg_velib_station_status.sql
-SELECT s.id,
+
+{{ config(
+    materialized='incremental',
+    unique_key='id',
+    on_schema_change='fail',
+    incremental_strategy='delete+insert'
+) }}
+
+
+SELECT 
+    s.id,
     s.station_id,
     s.station_code,
     s.num_bikes_available,
@@ -14,3 +24,7 @@ SELECT s.id,
     s.last_updated_at,
     s.extracted_at
 FROM {{ source('velib', 'station_status') }} AS s
+
+{% if is_incremental() %}
+    WHERE extracted_at > (SELECT MAX(extracted_at) FROM {{ this }})
+{% endif %}

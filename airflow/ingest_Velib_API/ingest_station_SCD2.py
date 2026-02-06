@@ -37,7 +37,6 @@ def upsert_stations(conn: connection, stations: List[StationDict]) -> None:
         for station in stations:
             station_hash = compute_hash(station)
             station_id = station['station_id']
-            now = datetime.now()
             # fetch current valid station_id (current_validity=True)
             cur.execute("""
                 SELECT id, hash_diff
@@ -58,7 +57,7 @@ def upsert_stations(conn: connection, stations: List[StationDict]) -> None:
                         SET current_validity = FALSE,
                             valid_to = %s
                         WHERE id = %s
-                    """, (now, current_id))
+                    """, (station.get('extracted_at'), current_id))
                     logger.info(f"Closed old version for station {station_id} (id={current_id})")
                     
                     # Step 2 : Inserting new version
@@ -95,7 +94,7 @@ def upsert_stations(conn: connection, stations: List[StationDict]) -> None:
                         json.dumps(station.get('rental_methods', [])),
                         station.get('station_opening_hours'),
                         station_hash,
-                        now,  # valid_from
+                        station.get('extracted_at'),  # valid_from
                         station.get('last_updated_at'),
                         station.get('extracted_at'),
                         station.get('extracted_at')
@@ -154,7 +153,7 @@ def upsert_stations(conn: connection, stations: List[StationDict]) -> None:
                         json.dumps(station.get('rental_methods', [])),
                         station.get('station_opening_hours'),
                         station_hash,
-                        now,  # valid_from
+                        station.get('extracted_at'),  # valid_from
                         station.get('last_updated_at'),
                         station.get('extracted_at'),
                         station.get('extracted_at')

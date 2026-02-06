@@ -1,4 +1,6 @@
--- dbt/models/staging/stg_velib_station_timeseries.sql
+-- dbt/models/staging/stg_velib_station_historical.sql
+
+
 SELECT s.id,
     s.station_id,
     s.station_code,
@@ -8,6 +10,9 @@ SELECT s.id,
     s.rental_methods,
     s.station_opening_hours,
     s.valid_from,
+    s.valid_to,
+    s.current_validity,
     s.last_updated_at,
-    s.extracted_at
+    s.extracted_at,
+    s.last_extracted_at
 FROM {{ source('velib', 'stations_scd') }} AS s

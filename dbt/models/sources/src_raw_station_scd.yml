@@ -98,3 +98,10 @@ sources:
             description: "Timestamp of last update by Velib API"
             data_tests:
               - not_null
+
+          ##
+          - name: last_extracted_at
+            description: |
+              Adding a second extraction timestamp information to be able to garantee that the pipeline was run recently
+            data_tests:
+              - not_null

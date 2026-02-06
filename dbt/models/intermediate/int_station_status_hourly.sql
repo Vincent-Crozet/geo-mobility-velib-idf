@@ -2,9 +2,9 @@
 
 /*
 Hourly aggregation of station status data
-Utilise DATE_TRUNC pour créer des slots horaires
+generating hourly slots with DATETRUNC
 
-💡 Gère les heures partielles : agrège les données disponibles
+💡 Compute aggregation
 */
 
 WITH hourly_slots AS (
@@ -21,32 +21,47 @@ WITH hourly_slots AS (
         AVG(num_docks_available) AS avg_docks_available,
         MIN(num_docks_available) AS min_docks_available,
         MAX(num_docks_available) AS max_docks_available,
+
+        AVG(mechanical_available) AS avg_mechanical_available,
+        MIN(mechanical_available) AS min_mechanical_available,
+        MAX(mechanical_available) AS max_mechanical_available,
+
+        AVG(ebikes_available) AS avg_ebikes_available,
+        MIN(ebikes_available) AS min_ebikes_available,
+        MAX(ebikes_available) AS max_ebikes_available,
         
-        -- Taux de disponibilité moyen
+        -- Bike availability rate
         AVG(
             CASE 
                 WHEN (num_bikes_available + num_docks_available) > 0 
                 THEN num_bikes_available::NUMERIC / (num_bikes_available + num_docks_available)
                 ELSE 0 
             END
-        ) AS avg_availability_rate,
+        ) AS avg_bike_availability_rate,
         
-        -- Proportion du temps en état critique
+        -- Timefame in critical bike availability
         AVG(
             CASE 
                 WHEN num_bikes_available < capacity * 0.1 
-                  OR num_docks_available < capacity * 0.1 
                 THEN 1.0 
                 ELSE 0.0 
             END
-        ) AS critical_time_ratio,
+        ) AS critical_bike_availability_rate,
         
+        -- Timefame in critical dock availability
+        AVG(
+            CASE 
+                WHEN num_docks_available < capacity * 0.1 
+                THEN 1.0 
+                ELSE 0.0 
+            END
+        ) AS critical_dock_availability_rate,
         -- Timestamps
         MIN(extracted_at) AS first_snapshot_at,
         MAX(extracted_at) AS last_snapshot_at,
         MAX(capacity) AS capacity  -- Assume stable dans l'heure
         
-    FROM {{ ref('stg_velib_station_status') }}
+    FROM {{ ref('int_station_status_with_capacity') }}
     GROUP BY 
         station_id, 
         DATE_TRUNC('hour', extracted_at)
@@ -67,9 +82,10 @@ SELECT
     min_docks_available,
     max_docks_available,
     
-    ROUND(avg_availability_rate * 100, 2) AS avg_availability_pct,
-    ROUND(critical_time_ratio * 100, 2) AS critical_time_pct,
+    ROUND(avg_bike_availability_rate * 100, 2) AS avg_bike_availability_pct,
+    ROUND(critical_bike_availability_rate * 100, 2) AS critical_bike_time_pct,
     
+    ROUND(critical_dock_availability_rate * 100, 2) AS critical_dock_time_pct,
     -- Métadonnées
     first_snapshot_at,
     last_snapshot_at,

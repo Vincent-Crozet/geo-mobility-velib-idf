@@ -1,10 +1,3 @@
--- dbt/models/staging/stg_velib_station_current.sql
-WITH latest_extraction AS (
-    SELECT 
-        MAX(extracted_at) AS max_extracted_at
-    FROM {{ source('velib', 'stations_scd') }} AS s
-)
-
 SELECT s.id,
     s.station_id,
     s.station_code,
@@ -15,7 +8,8 @@ SELECT s.id,
     s.station_opening_hours,
     s.valid_from,
     s.last_updated_at,
-    s.extracted_at
+    s.extracted_at,
+    s.last_extracted_at,
+    current_validity
 FROM {{ source('velib', 'stations_scd') }} AS s
-JOIN latest_extraction le
-    ON s.extracted_at = le.max_extracted_at
+WHERE current_validity='TRUE'

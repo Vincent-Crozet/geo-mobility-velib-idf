@@ -1,7 +1,7 @@
 -- dbt/models/intermediate/int_station_geo_enriched.sql
 
 /*
-geographical enrichment
+geographical enrichment for current station
 */
 
 SELECT 
