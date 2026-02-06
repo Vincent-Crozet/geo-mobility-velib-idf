@@ -77,12 +77,13 @@ def upsert_stations(conn: connection, stations: List[StationDict]) -> None:
                             valid_to,
                             current_validity,
                             last_updated_at,
-                            extracted_at
+                            extracted_at,
+                            last_extracted_at,
                         )
                         VALUES (
                             %s, %s, %s, %s, 
                             %s, %s, 
-                            %s, %s, %s, %s, NULL, TRUE, %s, %s
+                            %s, %s, %s, %s, NULL, TRUE, %s, %s,%s
                         )
                     """, (
                         station_id,
@@ -96,6 +97,7 @@ def upsert_stations(conn: connection, stations: List[StationDict]) -> None:
                         station_hash,
                         now,  # valid_from
                         station.get('last_updated_at'),
+                        station.get('extracted_at'),
                         station.get('extracted_at')
                     ))
                     stats['updated'] += 1
@@ -105,9 +107,16 @@ def upsert_stations(conn: connection, stations: List[StationDict]) -> None:
                     #-------------------------------------------------------------
                     #   No record evolution detected (Nothing to change) 
                     #-------------------------------------------------------------
+                    cur.execute("""
+                        UPDATE raw.stations_scd
+                        SET last_extracted_at = %s
+                        WHERE id = %s
+                    """, (station.get('extracted_at'), current_id))
                     stats['unchanged'] += 1
-                    logger.debug(f"Station {station_id} unchanged (hash: {station_hash[:8]})")
-                    
+                    logger.debug(
+                        f"Station {station_id} unchanged (hash: {station_hash[:8]}), "
+                        f"updated last_extracted_at"
+                    )
             else:
                     #-------------------------------------------------------------
                     #   New record detected (station_id not in DB)
@@ -127,12 +136,13 @@ def upsert_stations(conn: connection, stations: List[StationDict]) -> None:
                             valid_to,
                             current_validity,
                             last_updated_at,
-                            extracted_at
+                            extracted_at,
+                            last_extracted_at    
                         )
                         VALUES (
                             %s, %s, %s, %s, 
                             %s, %s, 
-                            %s, %s, %s, %s, NULL, TRUE, %s, %s
+                            %s, %s, %s, %s, NULL, TRUE, %s, %s,%s
                         )
                     """, (
                         station_id,
@@ -146,6 +156,7 @@ def upsert_stations(conn: connection, stations: List[StationDict]) -> None:
                         station_hash,
                         now,  # valid_from
                         station.get('last_updated_at'),
+                        station.get('extracted_at'),
                         station.get('extracted_at')
                     ))
                     

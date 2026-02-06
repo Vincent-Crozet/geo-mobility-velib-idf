@@ -26,11 +26,12 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
         rental_methods JSONB,
         station_opening_hours TEXT,
         hash_diff VARCHAR(32) NOT NULL,
-        valid_from TIMESTAMP DEFAULT now(),
-        valid_to TIMESTAMP,                       -- ← NULL = enregistrement actuel
+        valid_from TIMESTAMPTZ DEFAULT now(),
+        valid_to TIMESTAMPTZ,                       -- ← NULL = enregistrement actuel
         current_validity BOOLEAN DEFAULT TRUE,
-        last_updated_at TIMESTAMP,
-        extracted_at TIMESTAMP
+        last_updated_at TIMESTAMPTZ,
+        extracted_at TIMESTAMPTZ,
+        last_extracted_at TIMESTAMPTZ 
     );
     
     -- Index unique partiel : garantit un seul enregistrement current par station
@@ -60,9 +61,9 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
         is_renting INT,
         is_returning INT,
         rental_methods JSONB,
-        last_reported_at TIMESTAMP,
-        last_updated_at TIMESTAMP,
-        extracted_at TIMESTAMP
+        last_reported_at TIMESTAMPTZ,
+        last_updated_at TIMESTAMPTZ,
+        extracted_at TIMESTAMPTZ
     );
     
     CREATE INDEX IF NOT EXISTS idx_station_status_station_id 
