@@ -21,9 +21,16 @@ models:
     staging:
       +schema: staging
       +materialized: table
+    intermediate:
+      +schema: intermediate
+      +materialized: view   
     marts:
-      +schema: marts
-      +materialized: view
-    geo_assets:
-      +schema: geo_assets
-      +materialized: table
+      core:
+        +materialized: table
+        +schema: marts
+      analytics:
+        +materialized: table
+        +schema: marts
+      reporting:
+        +materialized: view
+        +schema: marts

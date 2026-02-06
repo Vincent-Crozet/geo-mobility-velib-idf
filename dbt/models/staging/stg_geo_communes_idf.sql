@@ -1,7 +1,7 @@
--- dbt/models/staging/stg_communes_idf.sql
+-- dbt/models/staging/stg_geo_communes_idf.sql
 
 SELECT c.insee::int,
-    c.nomcom::int,
+    c.nomcom::text,
     c.numdep::int,
     c.geometry
 FROM {{ source('geo_asset', 'communes_idf') }} AS c

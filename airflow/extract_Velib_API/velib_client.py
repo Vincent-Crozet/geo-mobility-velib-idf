@@ -1,7 +1,7 @@
 # airflow/ingestion/velib_client.py
 import os
 import requests
-from datetime import datetime
+from datetime import datetime,timezone
 from zoneinfo import ZoneInfo 
 from typing import Dict, Any
 
@@ -16,7 +16,11 @@ HEADERS = {
 }
 
 def current_ts() -> datetime:
-    return datetime.now(tz=ZoneInfo("Europe/Paris"))
+    PARIS_TZ = ZoneInfo("Europe/Paris")
+    paris_dt=datetime.now(tz=timezone.utc).astimezone(PARIS_TZ)
+    print(f"Temps de paris : {paris_dt}")
+    return paris_dt
+
 
 def fetch_stations() -> Dict[str, Any]:
     url = f"{BASE_URL}/station_information.json"

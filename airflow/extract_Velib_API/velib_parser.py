@@ -2,10 +2,14 @@
 from datetime import datetime, timezone
 from zoneinfo import ZoneInfo 
 from typing import List, Dict
+import logging
+logger = logging.getLogger(__name__)
 
 def ts_from_unix(ts: int) -> datetime:
-    # Convert Unix Timestamp to Paris zone time stamp
-    return datetime.fromtimestamp(ts, tz=ZoneInfo("Europe/Paris"))
+    """Convert Unix timestamp to Paris timezone"""
+    utc_dt = datetime.fromtimestamp(ts, tz=timezone.utc)
+    paris_dt = utc_dt.astimezone(ZoneInfo("Europe/Paris"))
+    return paris_dt
 
 def parse_stations(stations: dict,retrieved_timestamp:datetime) -> List[Dict]:
     last_updated_timestamp=ts_from_unix(stations["lastUpdatedOther"])

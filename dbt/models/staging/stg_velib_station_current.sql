@@ -1,4 +1,4 @@
--- dbt/models/staging/stg_velib_station_currentsituation.sql
+-- dbt/models/staging/stg_velib_station_current.sql
 WITH latest_extraction AS (
     SELECT 
         MAX(extracted_at) AS max_extracted_at
@@ -10,7 +10,7 @@ SELECT s.id,
     s.station_code,
     s.name,
     s.capacity,
-    ST_SetSRID(ST_MakePoint(s.lon, s.lat), 4326),
+    ST_SetSRID(ST_MakePoint(s.lon, s.lat), 4326) AS "geometry",
     s.rental_methods,
     s.station_opening_hours,
     s.valid_from,

@@ -6,6 +6,7 @@ echo "Initializing Velib Database"
 echo "================================================"
 
 psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-EOSQL
+
     -- activate PostGIS extension
     CREATE EXTENSION IF NOT EXISTS postgis;
     CREATE EXTENSION IF NOT EXISTS postgis_topology;
@@ -69,6 +70,15 @@ psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<-E
     
     CREATE INDEX IF NOT EXISTS idx_station_status_extracted_at 
     ON raw.station_status(extracted_at DESC);
+
+    -- Defining database session Timezone
+    SET timezone = 'Europe/Paris';
+EOSQL
+
+
+psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname "postgres" <<-EOSQL
+    -- Default timezone for the database should be set outside the DB
+    ALTER DATABASE ${POSTGRES_DB} SET timezone TO 'Europe/Paris';
 EOSQL
 
 echo "✓ Initialisation terminée avec succès!"
