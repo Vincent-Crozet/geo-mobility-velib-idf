@@ -52,10 +52,11 @@ geo_enriched AS (
         
         -- Calculs dérivés
         CASE 
-            WHEN cs.capacity <= 20 THEN 'Small'
-            WHEN cs.capacity <= 40 THEN 'Medium'
-            ELSE 'Large'
-        END AS station_size,
+            WHEN cq.capacity_quartile = 1 THEN 'Q1-Small'
+            WHEN cq.capacity_quartile = 2 THEN 'Q2-Medium'
+            WHEN cq.capacity_quartile = 3 THEN 'Q3-Large'
+            ELSE 'Q4-XLarge'
+        END AS station_size_category
         
         CASE 
             WHEN p.population IS NOT NULL 
@@ -88,7 +89,7 @@ SELECT
     name AS station_name,
     capacity,
     station_size,
-    
+    station_size_category,
     -- geometry
     geometry,
     

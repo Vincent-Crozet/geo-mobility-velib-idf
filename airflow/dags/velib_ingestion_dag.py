@@ -23,6 +23,7 @@ from ingest_Velib_API.ingest_station_status import insert_station_status
     catchup=False,
     is_paused_upon_creation=False,
     default_args={"retries": 2, "retry_delay": timedelta(minutes=2)},
+    max_active_runs=1,
     tags=["velib", "ingestion", "gis"],
 )
 

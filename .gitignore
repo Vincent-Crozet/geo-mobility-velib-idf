@@ -5,7 +5,6 @@
 .env.*
 !.env.example
 
-
 # Logs
 *.log
 
@@ -19,6 +18,10 @@ dbt/logs/
 
 # test local
 /test_local/
+
+# geoassets inputdata
+/computing_geoassets/input_data/
+/computing_geoassets/derived_data/
 
 # Superset
 /superset/.cache/
