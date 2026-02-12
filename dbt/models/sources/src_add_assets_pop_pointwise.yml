@@ -1,0 +1,42 @@
+# dbt/models/_sources/src_add_assets_communes_idf.yml
+version: 2
+
+sources:
+  - name: geo_asset
+    schema: add_assets
+
+    tables:  
+      - name: pop_pointwise_idf
+        description: |
+          description of population using point data every 30m 
+          from https://data.humdata.org/dataset/france-high-resolution-population-density-maps-demographic-estimates (Juil 2019)
+          
+          EPSG: 2154
+
+          ** Primary Key** fid
+        columns:
+          ##
+          - name: fid
+            description: |
+              unique identifier for point
+            data_tests:
+              - not_null
+          ##
+          - name: lat
+            description: |
+              point latitude 
+              epsg 4326
+            data_tests:
+              - not_null
+
+          ##
+          - name: lon
+            description: |
+              point longitude 
+              epsg 4326
+            data_tests:
+              - not_null
+          ##
+          - name: population
+            description: |
+              Population number        

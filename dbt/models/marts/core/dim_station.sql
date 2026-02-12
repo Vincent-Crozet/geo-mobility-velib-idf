@@ -1,4 +1,4 @@
--- dbt/models/marts/core/dim_stations.sql
+-- dbt/models/marts/core/dim_station.sql
 
 {{
   config(
@@ -14,113 +14,105 @@
 }}
 
 /*
-
-Grain : Une ligne par version de station (historisation des changements)
-Clé primaire : station_id (pour version actuelle uniquement)
-Clé naturelle : station_id + valid_from + valid_to (pour historique complet)
+Granularity    : historical data of stations
+Natural key    : station_id + valid_from + valid_to (historique complet)
 
 Enrichissements :
-- Géographique : commune, population
-- Opérationnel : capacité, type de station
-- Temporel : dates de validité (SCD2)
+- geographical (Zip code + commune) + commune population: int_station_historical_geo_enriched (SCD2-aware, grain station_id + valid_from)
+- Population 500m                   : int_station_pop_500m     (SCD2-aware, grain station_id + valid_from)
+- Operationnal                      : caracterization with quartile
+
 */
 
-WITH current_stations AS (
+WITH geo_enriched AS (
     SELECT
-        station_id,
-        station_code,
-        name,
-        capacity,
-        geometry,
-        rental_methods,
-        
-        -- Métadonnées SCD2
-        valid_from,
-        valid_to,
-        current_validity
-    FROM {{ ref('stg_velib_station_historical') }}
-),
+        g.*,
 
-geo_enriched AS (
-    SELECT
-        cs.*,
-        
-        -- Enrichissement géographique
-        c.nomcom AS commune_name,
-        c.insee AS commune_code,
-        p.population,
-        
-        -- Calculs dérivés
-        CASE 
+        -- Population 500m : grain (station_id + valid_from), SCD2-aware
+        pop.population_500m,
+        pop.pop_point_count_500m,
+
+        -- Quartile de capacité calculé sur les stations actives uniquement
+        -- Les versions historiques reçoivent NULL (comportement attendu)
+        CASE
             WHEN cq.capacity_quartile = 1 THEN 'Q1-Small'
             WHEN cq.capacity_quartile = 2 THEN 'Q2-Medium'
             WHEN cq.capacity_quartile = 3 THEN 'Q3-Large'
             ELSE 'Q4-XLarge'
-        END AS station_size_category
-        
-        CASE 
-            WHEN p.population IS NOT NULL 
-             AND cs.capacity > 0 
-            THEN p.population::NUMERIC / cs.capacity
+        END AS station_size_category,
+
+        -- Ratio population communale / capacité
+        CASE
+            WHEN g.commune_population IS NOT NULL AND g.capacity > 0
+            THEN g.commune_population::NUMERIC / g.capacity
             ELSE NULL
-        END AS population_per_bike,
-        
-        -- Flag station urbaine vs périphérique (basé sur densité population)
-        CASE 
-            WHEN p.population > 50000 THEN 'Urban Core'
-            WHEN p.population > 20000 THEN 'Urban'
-            WHEN p.population > 5000 THEN 'Suburban'
+        END AS commune_population_per_bike,
+
+        -- Ratio population locale 500m / capacité
+        CASE
+            WHEN pop.population_500m > 0 AND g.capacity > 0
+            THEN pop.population_500m::NUMERIC / g.capacity
+            ELSE NULL
+        END AS local_population_per_bike,
+
+        -- Catégorisation basée sur la densité locale 500m
+        CASE
+            WHEN pop.population_500m > 5000 THEN 'Urban Core'
+            WHEN pop.population_500m > 2000 THEN 'Urban'
+            WHEN pop.population_500m > 500  THEN 'Suburban'
             ELSE 'Peripheral'
         END AS area_type
-        
-    FROM current_stations cs
-    LEFT JOIN {{ ref('stg_geo_communes_idf') }} c
-        ON ST_Within(cs.geometry, c.geometry)
-    LEFT JOIN {{ ref('stg_geo_pop_communes') }} p
-        ON c.nomcom = p.nomcom
+
+    FROM {{ ref('int_station_historical_geo_enriched') }} g
+    -- Population 500m : même grain (station_id + valid_from)
+    LEFT JOIN {{ ref('int_station_pop_500m') }} pop
+        ON  pop.station_id = g.station_id
+        AND pop.valid_from  = g.valid_from
+    -- Quartile sur stations actives uniquement
+    LEFT JOIN (
+        SELECT
+            station_id,
+            NTILE(4) OVER (ORDER BY capacity) AS capacity_quartile
+        FROM {{ ref('stg_velib_station_current') }}
+    ) cq ON cq.station_id = g.station_id
 )
 
 SELECT
     -- Clés
     station_id,
     station_code,
-    
+
     -- Attributs descriptifs
     name AS station_name,
     capacity,
-    station_size,
     station_size_category,
-    -- geometry
     geometry,
-    
-    -- Enrichissement géographique
+
+    -- Enrichissement géographique commune
     commune_name,
     commune_code,
-    population,
+    commune_population,
+    ROUND(commune_population_per_bike, 0) AS commune_population_per_bike,
+
+    -- Population locale 500m (statique, haute résolution, SCD2-aware)
+    population_500m,
+    ROUND(local_population_per_bike, 0)   AS local_population_per_bike,
+
+    -- Catégorisation
     area_type,
-    ROUND(population_per_bike, 0) AS population_per_bike,
-    
+
     -- Métadonnées opérationnelles
     rental_methods,
-    
-    -- SCD Type 2 : historisation
+
+    -- SCD Type 2
     valid_from,
     valid_to,
     current_validity,
-    
+
     -- Flags qualité
-    CASE 
-        WHEN commune_name IS NOT NULL THEN true
-        ELSE false
-    END AS has_geo_enrichment,
-    
-    CASE 
-        WHEN population IS NOT NULL THEN true
-        ELSE false
-    END AS has_population_data
-    
+    CASE WHEN commune_name       IS NOT NULL THEN true ELSE false END AS has_geo_enrichment,
+    CASE WHEN commune_population IS NOT NULL THEN true ELSE false END AS has_commune_population,
+    CASE WHEN population_500m    > 0         THEN true ELSE false END AS has_local_population_500m
 
 FROM geo_enriched
-
--- Ordre par défaut : stations actives en premier
 ORDER BY current_validity DESC, station_id
