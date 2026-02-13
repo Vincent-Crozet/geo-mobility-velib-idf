@@ -3,5 +3,5 @@
 SELECT c.insee::int,
     c.nomcom::text,
     c.numdep::int,
-    c.geometry
+    ST_Transform(c.geometry,4326) AS geometry
 FROM {{ source('geo_asset', 'communes_idf') }} AS c

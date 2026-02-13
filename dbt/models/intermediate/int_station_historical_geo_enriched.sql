@@ -10,7 +10,7 @@ SELECT
     s.station_code,
     s.name,
     s.capacity,
-    s.geometry,
+    ST_Transform(s.geometry,4326) AS geometry,
     s.rental_methods,
     s.valid_from,       -- needed to ensure natural key
     s.valid_to,
@@ -25,6 +25,6 @@ SELECT
 
 FROM {{ ref('stg_velib_station_historical') }} s
 LEFT JOIN {{ ref('stg_geo_communes_idf') }} c
-    ON ST_Within(s.geometry, c.geometry)
+    ON ST_Within(ST_Transform(s.geometry,4326), ST_Transform(c.geometry,4326))
 LEFT JOIN {{ ref('stg_geo_pop_communes') }} p
     ON c.nomcom = p.nomcom

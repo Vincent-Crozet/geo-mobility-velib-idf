@@ -77,7 +77,7 @@ def upsert_stations(conn: connection, stations: List[StationDict]) -> None:
                             current_validity,
                             last_updated_at,
                             extracted_at,
-                            last_extracted_at,
+                            last_extracted_at
                         )
                         VALUES (
                             %s, %s, %s, %s, 
